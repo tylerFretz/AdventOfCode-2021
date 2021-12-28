@@ -1,0 +1,12 @@
+
+day12 (name, path, part) 
+	Pre		2D array ex -> [['QF', 'bw'], ['end', 'ne'], ...]
+	Post	global counter is set to number of paths
+
+1	Set locked to false
+2	Get visited lowercase nodes
+3	Loop visited-lowercase
+	1	if any lowercase occurs greater than one time, set locked true
+	2	end if
+4	end Loop
+5	

@@ -47,42 +47,79 @@ const constructGraph = (data) => {
 	return vertices;
 }
 
+const countOccurrences = (arr, val) => arr.reduce((a, v) => (v === val ? a + 1 : a), 0);
+
+const getOccurances = (visitedNodes) => {
+	let occurances = [];
+
+	for (const v of visitedNodes) {
+		const frequency = countOccurrences(visitedNodes, v);
+		occurances.push({ name: v, frequency })
+	}
+	return occurances;
+};
+
 const graph = constructGraph(input);
 console.log(graph);
 
-const getAllPaths = (startNode, endNode) => {
-	let visited = ['start'];
-	const allPaths = [];
+let allPaths = [];
+let visited = [];
 
-	for (const [node, adjacencyList] of graph) {
-		if (node !== endNode) {
-			visited = ['start'];
-			let pathList = [startNode];
-			allPaths.push(getPath(node, adjacencyList, endNode, visited));
-		}
-	} 
-
-	return allPaths;
-}
-
-const getPath = (startNode, startNodeList, endNode, visited, path) => {
+const getPaths = (startNode, startNodeList, endNode) => {
+	// base case. If a complete path has been formed, save path and return
 	if (startNode === endNode) {
-		return path;
+		visited.push(endNode);
+		allPaths = [...allPaths, [...visited]];
+		visited.pop();
+		return;
 	}
-	
+
 	visited.push(startNode);
 
-	for (const adj of startNodeList) {
-		if (!visited.includes(adj) || adj.toUpperCase() === adj) {
-			path.push(adj);
-			getPath(adj, graph.get(adj), endNode, visited, path);
+	const visitedLowercase = visited.filter(v => v.toLowerCase() === v);
 
-			path = path.filter(v => v !== adj);
+	let occurances = [];
+
+	for (const val of visited) {
+		const frequency = visitedLowercase.reduce((a, v) => (v === val ? a + 1 : a), 0);
+		if (!occurances.some(occ => occ.name === val)) {
+			occurances.push({ name: val, frequency })
+		}
+	}
+
+	const startNodeVisitedOccurance = occurances.find(o => o.name === startNode) ?? 0;
+
+	// see if a lowercase vertex has been visited three times
+	if (startNode.toLowerCase() === startNode && startNodeVisitedOccurance?.frequency === 3) {
+		visited.pop();
+		return;
+	}
+
+	// see if 2 lowercase verticies have both been visited twice
+	const twiceVisited = occurances.filter(oc => oc.frequency === 2);
+	if (startNode.toLowerCase() === startNode && twiceVisited.length > 1) {
+		return;
+	}
+
+	// if there are no possible nodes to travel to, backtrack
+	if (startNodeList.filter(v => !visited.includes(v) || v.toUpperCase() === v).length === 0) {
+		visited.pop();
+		return;
+	}
+
+	for (const adj of startNodeList) {
+		const freq = occurances.find(occ => occ.name === adj)?.frequency ?? 0;
+		if (!visited.includes(adj) || adj.toUpperCase() === adj || freq < 2) {
+			getPaths(adj, graph.get(adj), endNode, visited);
+
+			visited = visited.filter(v => v !== adj);
 		}
 	}
 	visited = visited.filter(v => v !== startNode);
 }
 
-const allPaths = getAllPaths('start', 'end');
+getPaths('start', graph.get('start'),'end');
 
 console.log(allPaths);
+
+console.log(allPaths.length);
