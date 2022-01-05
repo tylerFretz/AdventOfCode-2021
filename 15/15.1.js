@@ -33,23 +33,75 @@ const input = fs
 	.map((value, column) => (
 		{ 
 			value: Number(value),
+			visited: false,
+			x: column,
+			y: row,
 			adjacent: getAdjacent(column, row),
-			visited: false		
+			pathLength: (row === 0 && column === 0) ? 0 : Number.MAX_VALUE	
 		})));
 
-console.log(input[98][1]);
-
-const findMinAdjacent = (unvisitedAdj) => {
-	let minDistance = Number.MAX_VALUE;
-	let minDistanceCoor = null;
-
-	for (let i = 0; i < unvisitedAdj.length; i++) {
-		const { x, y } = unvisitedAdj[i]; 
-
-		if (input[y][x].value < minDistance) {
-			minDistance = input[y][x].value;
-			minDistanceCoor = { x, y };
+const getShortestPath = (endNode, graph) => {
+	let priorityQueue = [];
+	for (const row of graph) {
+		for (const node of row) {
+			priorityQueue.push(node);
 		}
 	}
-	return minDistanceCoor;
+
+	while (priorityQueue.length > 0) {
+		priorityQueue.sort((a, b) => a.pathLength - b.pathLength);
+		const root = priorityQueue.shift();
+		root.visited = true;
+
+		if (root.x === endNode.x && root.y === endNode.y) {
+			return root;
+		}
+
+		const unvisitedAdjacent = getAdjacent(root.x, root.y).map(adj => graph[adj.y][adj.x]).filter(node => node.visited === false);
+						
+
+		for (const node of unvisitedAdjacent) {
+			let temp = root.pathLength + node.value;
+			if (temp < node.pathLength) {
+				node.pathLength = temp;
+			}
+		}
+	}
+	console.log("Error");
+	return -1;
 }
+
+// causes stack overflow for large graphs (ex => x > 75 && y > 75)
+const getShortestPathRecursive = (startIndex, endIndex, graph, visited = []) => {
+	// base case.
+	if (startIndex.x === endIndex.x && startIndex.y === endIndex.y) {
+		const node = graph[startIndex.y][startIndex.x];
+		return node.pathLength;
+	}
+
+	// mark startIndex node as visited
+	graph[startIndex.y][startIndex.x].visited = true;
+	visited = [graph[startIndex.y][startIndex.x], ...visited];
+
+	let nextNode;
+	let minPath = Number.MAX_VALUE;
+
+	for (const node of visited) {
+		const unvisitedAdjacent = getAdjacent(node.x, node.y)
+								.map(adj => graph[adj.y][adj.x])
+								.filter(node => node.visited === false);
+		for (const adj of unvisitedAdjacent) {
+			if (node.pathLength + adj.value < minPath) {
+				nextNode = adj;
+				minPath = node.pathLength + adj.value;
+			} 
+		}
+	}
+
+	graph[nextNode.y][nextNode.x].pathLength = minPath;
+	return getShortestPathRecursive({ x: nextNode.x, y: nextNode.y }, endIndex, graph, visited);
+}
+
+const endIndex = { x: 99, y: 99 };
+const result = getShortestPath(endIndex, input);
+console.log(result);
