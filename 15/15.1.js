@@ -1,15 +1,15 @@
 const path = require('path');
 const fs = require('fs');
 
-// grid is 100 X 100
+
 // get non-diagonal adjacent indicies
-const getAdjacent = (x, y) => {
+const getAdjacent = (x, y, maxDimensions = 100) => {
 	let adj = [];
 	if (x - 1 > -1) {
 		adj.push({ x: x - 1, y })
 	} 
 
-	if (x + 1 < 100) {
+	if (x + 1 < maxDimensions) {
 		adj.push({ x: x + 1, y});
 	}
 
@@ -17,7 +17,7 @@ const getAdjacent = (x, y) => {
 		adj.push({ x, y: y - 1 });
 	}
 
-	if (y + 1 < 100) {
+	if (y + 1 < maxDimensions) {
 		adj.push({ x, y: y + 1 });
 	}
 
@@ -36,10 +36,11 @@ const input = fs
 			visited: false,
 			x: column,
 			y: row,
-			adjacent: getAdjacent(column, row),
 			pathLength: (row === 0 && column === 0) ? 0 : Number.MAX_VALUE	
 		})));
 
+
+// Dijkstra's 		
 const getShortestPath = (endNode, graph) => {
 	let priorityQueue = [];
 	for (const row of graph) {
@@ -102,6 +103,84 @@ const getShortestPathRecursive = (startIndex, endIndex, graph, visited = []) => 
 	return getShortestPathRecursive({ x: nextNode.x, y: nextNode.y }, endIndex, graph, visited);
 }
 
-const endIndex = { x: 99, y: 99 };
-const result = getShortestPath(endIndex, input);
-console.log(result);
+const buildFiveXFiveBoard = (data) => {
+	let fiveXFive = [];
+
+	// append 4 tiles horizontally
+	for (const line of data) {
+		let temp = [...line];
+		for (let i = 1; i < 5; i++) {
+			const newLine = line.map(point => (
+				{
+					...point,
+					value: point.value + i > 9 ? (point.value - 9) + i : point.value + i,
+					x: point.x + (i * 100),
+					pathLength: Number.MAX_VALUE,
+				}
+			));
+
+			temp = [...temp, ...newLine];
+		}
+		fiveXFive.push(temp);
+	}
+
+	let temp = [...fiveXFive];
+
+	// append 4 rows by 5 columns vertically
+	for (let i = 1; i < 5; i++) {
+		for (const line of temp) {
+			const newLine = line.map(point => (
+				{
+					...point,
+					value: point.value + i > 9 ? (point.value - 9) + i : point.value + i,
+					y: point.y + (i * 100),
+					pathLength: Number.MAX_VALUE,
+				}
+			))
+			fiveXFive.push(newLine);
+		}
+	}
+
+	return fiveXFive;
+}
+
+const uniformCostSearch = (startNode, endNode, graph) => {
+	let priorityQueue = [startNode];
+
+	while (priorityQueue.length > 0) {
+		priorityQueue.sort((a, b) => b.pathLength - a.pathLength);
+		const root = priorityQueue.pop();
+		root.visited = true;
+
+		if (root.x === endNode.x && root.y === endNode.y) {
+			return root;
+		}
+
+		const unvisitedAdjacent = getAdjacent(root.x, root.y, 500).map(adj => graph[adj.y][adj.x]).filter(node => node.visited === false);
+						
+
+		for (const node of unvisitedAdjacent) {
+			let pathLength = root.pathLength + node.value;
+
+			if (!priorityQueue.some(n => n.x === node.x && n.y === node.y)) {
+				node.pathLength = pathLength;
+				priorityQueue.push(node);
+			} else {
+				const queueNode = priorityQueue.find(n => n.x === node.x && n.y === node.y);
+				if (queueNode.pathLength > pathLength) {
+					priorityQueue = priorityQueue.filter(n => n.x !== node.x && n.y !== node.y);
+					node.pathLength = pathLength;
+					priorityQueue.push(node);
+				}
+			}
+		}
+	}
+	console.log("End node not found");
+	return -1;
+}
+
+
+const newBoard = buildFiveXFiveBoard(input);
+const res = uniformCostSearch(newBoard[0][0], newBoard[499][499], newBoard);
+console.log(res);
+
